@@ -2,6 +2,10 @@ import express, {Request, Response} from "express";
 
 const app = express();
 
+// default endpoint to test
+app.get("/",(req: Request, res: Response) =>{
+    res.send("server is up and running");
+});
 
 // adds one or more IPs to the blacklist or whitelist.
 app.post("/api/firewall/ip",(req: Request, res: Response) =>{});
@@ -27,3 +31,5 @@ app.get("/api/firewall/rules",(req: Request, res: Response) =>{});
 // removes one or more domain names from the black list or whitelist
 app.put("/api/firewall/rules",(req: Request, res: Response) =>{});
 
+
+export default app;

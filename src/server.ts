@@ -1,6 +1,7 @@
 import express, {Request, Response} from "express";
 import { ipValidationSchema } from "./validation/product.validation";
-import { IPInterface } from "./interfaces/ip.interface";
+import { addIpRules, deleteIpRules } from "./db/ip.queries";
+import { mode } from "./interfaces/mode.interface";
 import pool from './config/db.config'; // Import the database pool
 
 const app = express();
@@ -16,7 +17,6 @@ app.get("/",(req: Request, res: Response) =>{
 app.post("/api/firewall/ip", async (req: Request, res: Response) => {
     try {
         const { error, value } = ipValidationSchema.validate(req.body);
-
         if (error) {
             return res.status(400).json({
                 message: "Validation failed",
@@ -24,23 +24,18 @@ app.post("/api/firewall/ip", async (req: Request, res: Response) => {
             });
         }
 
-        const { ip, mode } = value as IPInterface;
-
-        // Use a parameterized query to insert data
-        const queryText = 'INSERT INTO ip_rules(ip, mode) VALUES($1, $2) RETURNING *';
-        const queryValues = [ip, mode];
-
-        const client = await pool.connect();
-        const result = await client.query(queryText, queryValues);
-        client.release();
+        const { ip, mode } = value as { ip: string | string[], mode: mode };
+        const ipsToInsert: string[] = Array.isArray(ip) ? ip : [ip];
+        const insertedIps = await addIpRules(ipsToInsert, mode);
 
         res.status(201).json({
-            message: "IP added successfully",
-            data: result.rows[0]
+            type: "ip",
+            mode: mode,
+            values: insertedIps,
+            status: "success"
         });
-
     } catch (err) {
-        console.error('Database insertion error', err);
+        console.error('API endpoint error', err);
         res.status(500).json({
             message: "An unexpected error occurred."
         });
@@ -48,7 +43,33 @@ app.post("/api/firewall/ip", async (req: Request, res: Response) => {
 });
 
 // Removes one or more IPs from the blacklist or whitelist
-app.delete("/api/firewall/ip",(req: Request, res: Response) =>{});
+app.delete("/api/firewall/ip",async (req: Request, res: Response) =>{
+     try {
+        const { error, value } = ipValidationSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                message: "Validation failed",
+                details: error.details,
+            });
+        }
+
+        const { ip, mode } = value as { ip: string | string[], mode: mode };
+        const ipsToInsert: string[] = Array.isArray(ip) ? ip : [ip];
+        const deletedIps = await deleteIpRules(ipsToInsert, mode);
+
+        res.status(200).json({
+            type: "ip",
+            mode: mode,
+            values: value,
+            status: "success"
+        });
+    } catch (err) {
+        console.error('API endpoint error', err);
+        res.status(500).json({
+            message: "An unexpected error occurred."
+        });
+    }
+});
 
 // adds one or more domain names o the blacklist or whitelist
 app.post("/api/firewall/url",(req: Request, res: Response) =>{});

@@ -22,12 +22,12 @@ export async function deletePortRules(ports: number[], mode: PortInterface['mode
     const client = await pool.connect();
     try {
         const deletePromises = ports.map(currentPort => {
-            const queryText = 'DELETE FROM port_rules WHERE port=$1 AND mode=$2 RETURNING *';
+            const queryText = 'DELETE FROM port_rules WHERE port=$1 AND mode=$2 RETURNING port as value';
             const queryValues = [currentPort, mode];
             return client.query(queryText, queryValues);
         });
         const result = await Promise.all(deletePromises);
-        return result.map(res => res.rowCount);
+        return result.flatMap(res => res.rows.map(row => row.value));
     } finally {
         client.release();
     }

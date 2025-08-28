@@ -22,12 +22,12 @@ export async function deleteUrlRules(urls: string[], mode: URLInterface['mode'])
     const client = await pool.connect();
     try {
         const deletePromises = urls.map(currentUrl => {
-            const queryText = 'DELETE FROM url_rules WHERE url=$1 AND mode=$2 RETURNING *';
+            const queryText = 'DELETE FROM url_rules WHERE url=$1 AND mode=$2 RETURNING url as value';
             const queryValues = [currentUrl, mode];
             return client.query(queryText, queryValues);
         });
         const result = await Promise.all(deletePromises);
-        return result.map(res => res.rowCount);
+        return result.flatMap(res => res.rows.map(row => row.value));
     } finally {
         client.release();
     }

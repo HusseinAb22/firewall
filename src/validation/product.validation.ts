@@ -9,7 +9,7 @@ const ipArraySchema = Joi.array().items(ipStringSchema).min(1).required();
 
 // The final schema uses .alternatives() to accept either a single string or an array
 export const ipValidationSchema = Joi.object({
-  ip: Joi.alternatives().try(ipStringSchema, ipArraySchema),
+  values: Joi.alternatives().try(ipStringSchema, ipArraySchema),
   mode: Joi.string().valid('blacklist', 'whitelist').required(),
 });
 
@@ -24,7 +24,7 @@ const domainSchema = Joi.string().domain();
 const itemSchema = Joi.alternatives().try(fullUrlSchema, domainSchema).required();
 
 export const urlValidationSchema = Joi.object({
-  url: Joi.alternatives().try(
+  values: Joi.alternatives().try(
     itemSchema,
     Joi.array().items(itemSchema).min(1)
   ).required(),
@@ -37,7 +37,7 @@ const portNumberSchema = Joi.number().integer().min(1).max(65535).required();
 
 // The final schema uses .alternatives() to accept either a single number or an array
 export const portValidationSchema = Joi.object({
-  port: Joi.alternatives().try(
+  values: Joi.alternatives().try(
     portNumberSchema,
     Joi.array().items(portNumberSchema).min(1)
   ).required(),

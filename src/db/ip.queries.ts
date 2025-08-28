@@ -17,20 +17,17 @@ export async function addIpRules(ips: string[], mode: IPInterface['mode']) {
     }
 }
 // delete ips
-export async function deleteIpRules(ips: string[], mode: IPInterface['mode']){
+export async function deleteIpRules(ips: string[], mode: 'blacklist' | 'whitelist') {
     const client = await pool.connect();
-    try{
-        const deletePromises = ips.map(currentIp =>{
-            // Corrected DELETE query
-            const queryText = 'DELETE FROM ip_rules WHERE ip=$1 AND mode=$2 RETURNING *';
-            const queryValues= [currentIp, mode];
-            return client.query(queryText,queryValues);
+    try {
+        const deletePromises = ips.map(currentIp => {
+            const queryText = 'DELETE FROM ip_rules WHERE ip=$1 AND mode=$2 RETURNING ip as value';
+            const queryValues = [currentIp, mode];
+            return client.query(queryText, queryValues);
         });
-        const result = await Promise.all(deletePromises);
-        // The result of a DELETE query has a row count, but not necessarily a row
-        // So, we'll return the count of deleted rows.
-        return result.map(res => res.rowCount);
-    } finally{
+        const results = await Promise.all(deletePromises);
+        return results.flatMap(res => res.rows.map(row => row.value));
+    } finally {
         client.release();
     }
 }

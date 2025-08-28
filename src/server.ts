@@ -1,6 +1,8 @@
 import express, {Request, Response} from "express";
-import { ipValidationSchema } from "./validation/product.validation";
+import { ipValidationSchema, urlValidationSchema } from "./validation/product.validation";
 import { addIpRules, deleteIpRules } from "./db/ip.queries";
+import { addUrlRules, deleteUrlRules } from "./db/url.queries"; 
+import { URLInterface } from "./interfaces/url.interface";
 import { mode } from "./interfaces/mode.interface";
 import pool from './config/db.config'; // Import the database pool
 
@@ -72,10 +74,76 @@ app.delete("/api/firewall/ip",async (req: Request, res: Response) =>{
 });
 
 // adds one or more domain names o the blacklist or whitelist
-app.post("/api/firewall/url",(req: Request, res: Response) =>{});
+app.post("/api/firewall/url", async (req: Request, res: Response) => {
+    try {
+        const { error, value } = urlValidationSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                message: "Validation failed",
+                details: error.details,
+            });
+        }
+
+        const { url, mode } = value as { url: string | string[], mode: URLInterface['mode'] };
+        const urlsToInsert: string[] = Array.isArray(url) ? url : [url];
+
+        const insertedUrls = await addUrlRules(urlsToInsert, mode);
+
+        res.status(201).json({
+            type: "url",
+            mode: mode,
+            values: insertedUrls,
+            status: "success"
+        });
+    } catch (err) {
+        console.error('API endpoint error for URL:', err);
+        res.status(500).json({
+            message: "An unexpected error occurred."
+        });
+    }
+});
+
 
 // removes one or more domain names from the blacklist or whitelist.
-app.delete("/api/firewall/url",(req: Request, res: Response) =>{});
+app.delete("/api/firewall/url", async (req: Request, res: Response) => {
+    try {
+        const { error, value } = urlValidationSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                message: "Validation failed",
+                details: error.details,
+            });
+        }
+
+        const { url, mode } = value as { url: string | string[], mode: URLInterface['mode'] };
+        const urlsToDelete: string[] = Array.isArray(url) ? url : [url];
+
+        const deletedRows = await deleteUrlRules(urlsToDelete, mode);
+
+        // Check if any rows were deleted
+        const filteredRows = deletedRows.filter(count => typeof count === 'number');
+
+        const totalDeleted = filteredRows.reduce((sum, count) => sum + count, 0);
+
+        if (totalDeleted > 0) {
+            return res.status(200).json({
+                message: `Successfully deleted ${totalDeleted} URL(s).`,
+                status: "success"
+            });
+        } else {
+            return res.status(404).json({
+                message: "No matching URLs found to delete.",
+                status: "not found"
+            });
+        }
+
+    } catch (err) {
+        console.error('API endpoint error for URL:', err);
+        res.status(500).json({
+            message: "An unexpected error occurred."
+        });
+    }
+});
 
 // adds one or more ports to the blacklist whitelist.
 app.post("/api/firewall/port",(req: Request, res: Response) =>{});

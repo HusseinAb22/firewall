@@ -32,3 +32,15 @@ export async function deletePortRules(ports: number[], mode: PortInterface['mode
         client.release();
     }
 }
+
+//get all ports
+export async function getPortRulesByMode(mode: 'blacklist' | 'whitelist') {
+    const client = await pool.connect();
+    try {
+        const queryText = 'SELECT id, port as value FROM port_rules WHERE mode = $1';
+        const result = await client.query(queryText, [mode]);
+        return result.rows;
+    } finally {
+        client.release();
+    }
+}

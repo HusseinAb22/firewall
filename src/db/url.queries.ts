@@ -32,3 +32,15 @@ export async function deleteUrlRules(urls: string[], mode: URLInterface['mode'])
         client.release();
     }
 }
+
+//get all urls 
+export async function getUrlRulesByMode(mode: 'blacklist' | 'whitelist') {
+    const client = await pool.connect();
+    try {
+        const queryText = 'SELECT id, url as value FROM url_rules WHERE mode = $1';
+        const result = await client.query(queryText, [mode]);
+        return result.rows;
+    } finally {
+        client.release();
+    }
+}

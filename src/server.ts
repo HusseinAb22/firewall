@@ -1,10 +1,12 @@
 import express, {Request, Response} from "express";
-import { ipValidationSchema, urlValidationSchema } from "./validation/product.validation";
+import { ipValidationSchema, portValidationSchema, urlValidationSchema } from "./validation/product.validation";
 import { addIpRules, deleteIpRules } from "./db/ip.queries";
 import { addUrlRules, deleteUrlRules } from "./db/url.queries"; 
 import { URLInterface } from "./interfaces/url.interface";
 import { mode } from "./interfaces/mode.interface";
 import pool from './config/db.config'; // Import the database pool
+import { addPortRules, deletePortRules } from "./db/port.queries";
+import { PortInterface } from "./interfaces/port.interface";
 
 const app = express();
 app.use(express.json());
@@ -146,10 +148,72 @@ app.delete("/api/firewall/url", async (req: Request, res: Response) => {
 });
 
 // adds one or more ports to the blacklist whitelist.
-app.post("/api/firewall/port",(req: Request, res: Response) =>{});
+app.post("/api/firewall/port", async (req: Request, res: Response) => {
+    try {
+        const { error, value } = portValidationSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                message: "Validation failed",
+                details: error.details,
+            });
+        }
+
+        const { port, mode } = value as { port: number | number[], mode: PortInterface['mode'] };
+        const portsToInsert: number[] = Array.isArray(port) ? port : [port];
+
+        const insertedPorts = await addPortRules(portsToInsert, mode);
+
+        res.status(201).json({
+            type: "port",
+            mode: mode,
+            values: insertedPorts,
+            status: "success"
+        });
+    } catch (err) {
+        console.error('API endpoint error for Port:', err);
+        res.status(500).json({
+            message: "An unexpected error occurred."
+        });
+    }
+});
 
 // removes one or more ports from the blacklist or whitelist
-app.delete("/api/firewall/port",(req: Request, res: Response) =>{});
+app.delete("/api/firewall/port", async (req: Request, res: Response) => {
+    try {
+        const { error, value } = portValidationSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                message: "Validation failed",
+                details: error.details,
+            });
+        }
+
+        const { port, mode } = value as { port: number | number[], mode: PortInterface['mode'] };
+        const portsToDelete: number[] = Array.isArray(port) ? port : [port];
+
+        const deletedRows = await deletePortRules(portsToDelete, mode);
+
+        const filteredRows = deletedRows.filter(count => typeof count === 'number');
+        const totalDeleted = filteredRows.reduce((sum, count) => sum + count, 0);
+
+        if (totalDeleted > 0) {
+            return res.status(200).json({
+                message: `Successfully deleted ${totalDeleted} port(s).`,
+                status: "success"
+            });
+        } else {
+            return res.status(404).json({
+                message: "No matching ports found to delete.",
+                status: "not found"
+            });
+        }
+    } catch (err) {
+        console.error('API endpoint error for Port:', err);
+        res.status(500).json({
+            message: "An unexpected error occurred."
+        });
+    }
+});
 
 // retrieves all current firewall rules for IPs, URLs, and ports in both blacklist and white list
 app.get("/api/firewall/rules",(req: Request, res: Response) =>{});

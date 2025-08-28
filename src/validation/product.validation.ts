@@ -30,3 +30,16 @@ export const urlValidationSchema = Joi.object({
   ).required(),
   mode: Joi.string().valid('blacklist', 'whitelist').required(),
 });
+
+//port validation
+// Schema for a single port number
+const portNumberSchema = Joi.number().integer().min(1).max(65535).required();
+
+// The final schema uses .alternatives() to accept either a single number or an array
+export const portValidationSchema = Joi.object({
+  port: Joi.alternatives().try(
+    portNumberSchema,
+    Joi.array().items(portNumberSchema).min(1)
+  ).required(),
+  mode: Joi.string().valid('blacklist', 'whitelist').required(),
+});

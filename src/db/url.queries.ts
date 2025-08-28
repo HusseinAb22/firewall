@@ -44,3 +44,21 @@ export async function getUrlRulesByMode(mode: 'blacklist' | 'whitelist') {
         client.release();
     }
 }
+
+//update url rule
+export async function updateUrlRulesStatus(ids: number[], mode: string, active: boolean) {
+    const client = await pool.connect();
+    try {
+        const queryText = `
+            UPDATE url_rules
+            SET active = $1
+            WHERE id = ANY($2) AND mode = $3
+            RETURNING id, url as value, active
+        `;
+        const queryValues = [active, ids, mode];
+        const result = await client.query(queryText, queryValues);
+        return result.rows;
+    } finally {
+        client.release();
+    }
+}

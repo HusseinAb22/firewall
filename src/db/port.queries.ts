@@ -44,3 +44,21 @@ export async function getPortRulesByMode(mode: 'blacklist' | 'whitelist') {
         client.release();
     }
 }
+
+//update port rule 
+export async function updatePortRulesStatus(ids: number[], mode: string, active: boolean) {
+    const client = await pool.connect();
+    try {
+        const queryText = `
+            UPDATE port_rules
+            SET active = $1
+            WHERE id = ANY($2) AND mode = $3
+            RETURNING id, port as value, active
+        `;
+        const queryValues = [active, ids, mode];
+        const result = await client.query(queryText, queryValues);
+        return result.rows;
+    } finally {
+        client.release();
+    }
+}

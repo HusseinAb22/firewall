@@ -1,12 +1,13 @@
 import express, {Request, Response} from "express";
 import { ipValidationSchema, portValidationSchema, urlValidationSchema } from "./validation/product.validation";
-import { addIpRules, deleteIpRules, getIpRulesByMode } from "./db/ip.queries";
-import { addUrlRules, deleteUrlRules, getUrlRulesByMode } from "./db/url.queries"; 
+import { addIpRules, deleteIpRules, getIpRulesByMode, updateIpRulesStatus } from "./db/ip.queries";
+import { addUrlRules, deleteUrlRules, getUrlRulesByMode, updateUrlRulesStatus } from "./db/url.queries"; 
 import { URLInterface } from "./interfaces/url.interface";
 import { mode } from "./interfaces/mode.interface";
 import pool from './config/db.config'; // Import the database pool
-import { addPortRules, deletePortRules, getPortRulesByMode } from "./db/port.queries";
+import { addPortRules, deletePortRules, getPortRulesByMode, updatePortRulesStatus } from "./db/port.queries";
 import { PortInterface } from "./interfaces/port.interface";
+import { RuleUpdateResult } from "./interfaces/ruleUpdateResult.interface";
 
 const app = express();
 app.use(express.json());
@@ -261,7 +262,43 @@ app.get("/api/firewall/rules", async (req: Request, res: Response) => {
 });
 
 // removes one or more domain names from the black list or whitelist
-app.put("/api/firewall/rules",(req: Request, res: Response) =>{});
+app.put("/api/firewall/rules", async (req: Request, res: Response) => {
+    try {
+        const { ips, urls, ports } = req.body;
+        const updatedRules:RuleUpdateResult[] = [];
+
+        const updatePromises = [];
+
+        if (ips && ips.ids && ips.ids.length > 0) {
+            updatePromises.push(updateIpRulesStatus(ips.ids, ips.mode, ips.active));
+        }
+        if (urls && urls.ids && urls.ids.length > 0) {
+            updatePromises.push(updateUrlRulesStatus(urls.ids, urls.mode, urls.active));
+        }
+        if (ports && ports.ids && ports.ids.length > 0) {
+            updatePromises.push(updatePortRulesStatus(ports.ids, ports.mode, ports.active));
+        }
+
+        const results = await Promise.all(updatePromises);
+        results.forEach(result => updatedRules.push(...result));
+
+        if (updatedRules.length > 0) {
+            return res.status(200).json({
+                message: "Successfully updated rule statuses.",
+                updated: updatedRules
+            });
+        } else {
+            return res.status(404).json({
+                message: "No matching rules found to update."
+            });
+        }
+    } catch (err) {
+        console.error('API endpoint error during rule update:', err);
+        res.status(500).json({
+            message: "An unexpected error occurred."
+        });
+    }
+});
 
 
 // A simple test route to check the database connection

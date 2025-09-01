@@ -3,6 +3,7 @@ import { getIpRulesByMode, updateIpRulesStatus } from "../db/ip.queries";
 import { getUrlRulesByMode, updateUrlRulesStatus } from "../db/url.queries";
 import { getPortRulesByMode, updatePortRulesStatus } from "../db/port.queries";
 import { RuleUpdateResult } from "../interfaces/ruleUpdateResult.interface";
+import { logger } from "../config/logger";
 
 const router = express.Router();
 
@@ -40,11 +41,11 @@ router.get("/rules", async (req: Request, res: Response) => {
                 whitelist: portsWhitelist
             }
         };
-
+        logger.info('GET /api/firewall/rules endpoint was accessed.');
         res.status(200).json(allRules);
 
     } catch (err) {
-        console.error('API endpoint error for getting all rules:', err);
+        logger.error(`Error in /api/firewall/rules GET: ${err}`);
         res.status(500).json({
             message: "An unexpected error occurred while retrieving rules."
         });
@@ -73,17 +74,19 @@ router.put("/rules", async (req: Request, res: Response) => {
         results.forEach(result => updatedRules.push(...result));
 
         if (updatedRules.length > 0) {
+            logger.info('PUT /api/firewall/rules endpoint was accessed.');
             return res.status(200).json({
                 message: "Successfully updated rule statuses.",
                 updated: updatedRules
             });
         } else {
+            logger.error(`Error in /api/firewall/rules PUT: 404`);
             return res.status(404).json({
                 message: "No matching rules found to update."
             });
         }
     } catch (err) {
-        console.error('API endpoint error during rule update:', err);
+        logger.error(`Error in /api/firewall/rules PUT: ${err}`);
         res.status(500).json({
             message: "An unexpected error occurred."
         });

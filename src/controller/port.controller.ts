@@ -2,6 +2,7 @@ import express, {Request, Response} from "express";
 import { portValidationSchema } from "../validation/product.validation";
 import { addPortRules, deletePortRules } from "../db/port.queries";
 import { PortInterface } from "../interfaces/port.interface";
+import { logger } from "../config/logger";
 
 
 const router = express.Router();
@@ -21,6 +22,7 @@ router.post("/port", async (req: Request, res: Response) => {
 
         const insertedPorts = await addPortRules(portsToInsert, mode);
 
+        logger.info('POST /api/firewall/port endpoint was accessed.');
         res.status(201).json({
             type: "port",
             mode: mode,
@@ -28,7 +30,7 @@ router.post("/port", async (req: Request, res: Response) => {
             status: "success"
         });
     } catch (err) {
-        console.error('API endpoint error for Port:', err);
+        logger.error(`Error in /api/firewall/port DELETE: ${err}`);
         res.status(500).json({
             message: "An unexpected error occurred."
         });
@@ -51,6 +53,7 @@ router.delete("/port", async (req: Request, res: Response) => {
 
         const deletedPorts = await deletePortRules(portsToDelete, mode);
 
+        logger.info('DELETE /api/firewall/port endpoint was accessed.');
         res.status(200).json({
             type: "port",
             mode: mode,
@@ -59,7 +62,7 @@ router.delete("/port", async (req: Request, res: Response) => {
         });
         
     } catch (err) {
-        console.error('API endpoint error for Port:', err);
+        logger.error(`Error in /api/firewall/port DELETE: ${err}`);
         res.status(500).json({
             message: "An unexpected error occurred."
         });

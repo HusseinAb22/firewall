@@ -2,6 +2,7 @@ import express, {Request, Response} from "express";
 import { urlValidationSchema } from "../validation/product.validation";
 import { addUrlRules, deleteUrlRules } from "../db/url.queries";
 import { URLInterface } from "../interfaces/url.interface";
+import { logger } from "../config/logger";
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ router.post("/url", async (req: Request, res: Response) => {
 
         const insertedUrls = await addUrlRules(urlsToInsert, mode);
 
+        logger.info('POST /api/firewall/url endpoint was accessed.');
         res.status(201).json({
             type: "url",
             mode: mode,
@@ -29,7 +31,7 @@ router.post("/url", async (req: Request, res: Response) => {
             status: "success"
         });
     } catch (err) {
-        console.error('API endpoint error for URL:', err);
+        logger.error(`Error in /api/firewall/url POST: ${err}`);
         res.status(500).json({
             message: "An unexpected error occurred."
         });
@@ -59,6 +61,7 @@ router.delete("/url", async (req: Request, res: Response) => {
 
         const deletedUrls = filteredRows.reduce((sum, count) => sum + count, 0);
 
+        logger.info('DELETE /api/firewall/url endpoint was accessed.');
         res.status(200).json({
             type: "url",
             mode: mode,
@@ -67,7 +70,7 @@ router.delete("/url", async (req: Request, res: Response) => {
         });
 
     } catch (err) {
-        console.error('API endpoint error for URL:', err);
+        logger.error(`Error in /api/firewall/url DELETE: ${err}`);
         res.status(500).json({
             message: "An unexpected error occurred."
         });
